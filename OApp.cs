@@ -1,9 +1,7 @@
 ﻿using Microsoft.Office.Interop.Outlook;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
+
 
 using System.Threading.Tasks;
 
@@ -131,6 +129,12 @@ namespace OutlookAttachmentsDownloader
             if(outlookApplication != null)
             {
                //Release here COM objects
+               foreach(KeyValuePair<string,Folder> account in accounts)
+                {
+                    ReleaseComObject(account.Value);
+                }
+                ReleaseComObject(outlookNamespace);
+                ReleaseComObject(outlookApplication);
             }
         }
 
@@ -161,7 +165,7 @@ namespace OutlookAttachmentsDownloader
                         {
                             for (int i = 1; i <= mailItem.Attachments.Count; i++)
                             {
-                                mailItem.Attachments[i].SaveAsFile(destination + mailItem.Attachments[i].FileName);
+                                mailItem.Attachments[i].SaveAsFile(destination + mailItem.Attachments[i].Parent + "-" +  mailItem.Attachments[i].FileName);
                             }
                         }
                         catch(System.Runtime.InteropServices.COMException ex)
