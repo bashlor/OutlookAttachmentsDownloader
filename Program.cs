@@ -10,7 +10,7 @@ namespace OutlookAttachmentsDownloader
     {
         static int Main()
         {
-            Console.ReadKey();
+            OApp oapp = OApp.Instance;
             return 0;
         }
     }
