@@ -1,8 +1,7 @@
 ﻿using Microsoft.Office.Interop.Outlook;
 using System;
 using System.Collections.Generic;
-
-
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace OutlookAttachmentsDownloader
@@ -19,7 +18,7 @@ namespace OutlookAttachmentsDownloader
 
 
         string selectedAccount;
-        string selectedFolder;
+        string[] selectedFolders;
         string destination;
 
         static OApp() { }
@@ -35,19 +34,19 @@ namespace OutlookAttachmentsDownloader
                     selectedAccount = value;
                 }
                 else
-                    throw new System.Exception("Account not found ! Pls check again !");
+                    throw new System.Exception("Account not found !");
             }
         }
 
-        public string SelectedFolder
+        public string[] SelectedFolder
         {
             get
             {
-                return selectedFolder;
+                return selectedFolders;
             }
             set
             {
-                selectedFolder = value;
+                selectedFolders = value;
             }
         }
 
@@ -63,24 +62,56 @@ namespace OutlookAttachmentsDownloader
             }
         }
 
-        public async void SaveAttachments()
+        public string[] AccountsAvailable
         {
-            Folder folder = await SearchFolder(selectedFolder, accounts[selectedAccount]);
+            get
+            {
+                return accounts.Keys.ToArray();
+            }
+        }
+
+        public string[] FoldersList
+        {
+            get
+            {
+                List<string> foldersArray = new List<string>();
+                EnumerateFolders(accounts[selectedAccount], (folder) =>
+                {
+                    foldersArray.Append(folder.FolderPath);
+                });
+                return foldersArray.ToArray();
+            }
+        }
+
+        public async Task SaveAttachments(string folderName)
+        {
+            
+            Folder folder = await SearchFolder(folderName, accounts[selectedAccount]);
             if(folder == null)
             {
-                throw new System.Exception("Folder " + selectedFolder + " not found.");
+                throw new System.Exception("Folder " + folderName + " not found.");
             }
             else
             {
-                Console.WriteLine("Folder " + selectedFolder +  " found ! ");
                 await SaveAttachmentForEveryMailItem(folder);
-                EnumerateFolders(folder, (subFolder) =>
+                EnumerateFolders(folder,async (subFolder) =>
                 {
-                    Console.WriteLine("Exploring " + subFolder.FolderPath + "...");
-                    SaveAttachmentForEveryMailItem(folder);
+                    await SaveAttachmentForEveryMailItem(folder);
                 });
             }
 
+        }
+
+        public Task SaveAttachments()
+        {
+            List<Task> tasksList = new List<Task>(); 
+            foreach(string folderName in selectedFolders)
+            {
+                var task = SaveAttachments(folderName);
+                tasksList.Append(task);
+                task.Start();
+            }
+            return Task.WhenAll(tasksList.ToArray());
         }
 
         private void EnumerateFolders(Folder folder, System.Action<Folder> callback)
@@ -111,24 +142,17 @@ namespace OutlookAttachmentsDownloader
         }
 
         private OApp() {
-            try
-            {
+
                 outlookApplication = new Application();
                 outlookNamespace = outlookApplication.GetNamespace("MAPI");
                 accounts = new Dictionary<string, Folder>();
                 _initialization();
-
-            }catch (System.Exception ex) {
-                Console.WriteLine("OApp Outlook intiialization error : " + ex.Message);
-                closeInstance();
-            }
         }
 
-        private void closeInstance()
+        public void closeInstance()
         {
             if(outlookApplication != null)
             {
-               //Release here COM objects
                foreach(KeyValuePair<string,Folder> account in accounts)
                 {
                     ReleaseComObject(account.Value);
@@ -151,9 +175,8 @@ namespace OutlookAttachmentsDownloader
             fetchAccountsList();
         }
         
-        private Task SaveAttachmentForEveryMailItem(Folder folder)
+        private async Task SaveAttachmentForEveryMailItem(Folder folder)
         {
-            Console.WriteLine("Saving attchments from " + folder.FolderPath);
             foreach(Object item in folder.Items)
             {
                 if (item is MailItem)
@@ -165,21 +188,18 @@ namespace OutlookAttachmentsDownloader
                         {
                             for (int i = 1; i <= mailItem.Attachments.Count; i++)
                             {
-                                mailItem.Attachments[i].SaveAsFile(destination + mailItem.Attachments[i].Parent + "-" +  mailItem.Attachments[i].FileName);
+                                await mailItem.Attachments[i].SaveAsFile(destination + mailItem.Attachments[i].Parent + "-" +  mailItem.Attachments[i].FileName);
                             }
                         }
                         catch(System.Runtime.InteropServices.COMException ex)
                         {
-                            Console.WriteLine("Failure while trying get attachment from " + mailItem.Subject);
-                            Console.WriteLine(ex.Message);
+                            throw new  SystemException("Error while trying download attachment from email :  " + ex.Message + "\n" + "Issues with : " + mailItem.Subject);
                         }
-                        Console.WriteLine("Saving attachments from email " + mailItem.Subject);
-
                     }
                     
                 }
             }
-            return Task.CompletedTask;
+         
         }
 
         private async Task<Folder> SearchFolder(string folderName, Folder root)

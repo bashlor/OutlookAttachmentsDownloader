@@ -10,7 +10,10 @@ namespace OutlookAttachmentsDownloader
     {
         static int Main()
         {
-            OApp oapp = OApp.Instance;
+            Cli cli = Cli.Instance;
+            Task task =  cli.InitializeSequence();
+            task.Start();
+            task.Wait();
             return 0;
         }
     }
