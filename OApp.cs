@@ -70,17 +70,20 @@ namespace OutlookAttachmentsDownloader
             }
         }
 
-        public string[] FoldersList
+        public async Task<string[]> FetchFolderList()
         {
-            get
+             var task = await Task.Run(() =>
             {
                 List<string> foldersArray = new List<string>();
                 EnumerateFolders(accounts[selectedAccount], (folder) =>
                 {
-                    foldersArray.Append(folder.FolderPath);
+                    foldersArray.Add(folder.FolderPath);
                 });
+
                 return foldersArray.ToArray();
-            }
+            });
+            return task;
+
         }
 
         public async Task SaveAttachments(string folderName)
@@ -188,7 +191,7 @@ namespace OutlookAttachmentsDownloader
                         {
                             for (int i = 1; i <= mailItem.Attachments.Count; i++)
                             {
-                                await mailItem.Attachments[i].SaveAsFile(destination + mailItem.Attachments[i].Parent + "-" +  mailItem.Attachments[i].FileName);
+                                await mailItem.Attachments[i].SaveAsFile(destination + $"\\{folder.Name}\\" + mailItem.Attachments[i].Parent +  mailItem.Attachments[i].FileName);
                             }
                         }
                         catch(System.Runtime.InteropServices.COMException ex)

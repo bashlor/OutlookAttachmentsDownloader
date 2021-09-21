@@ -23,7 +23,7 @@ namespace OutlookAttachmentsDownloader
         public async Task  InitializeSequence()
         {
             AskEmailAccount();
-            AskFolders();
+            await AskFolders();
             AskDestination();
             AskConfirmation();
             await startDownloads();
@@ -34,23 +34,22 @@ namespace OutlookAttachmentsDownloader
         {
             var email = Prompt.Select("Select the account", oapp.AccountsAvailable);
             oapp.SelectedAccount = email;
-            Console.WriteLine("You selected : " + email);
         }
 
-        private void AskFolders()
+        private async Task AskFolders()
         {
             if(oapp.SelectedAccount == null)
             {
                 Console.WriteLine("No account selected ! ");
                 AskEmailAccount();
             }
-            var folders = Prompt.MultiSelect("Select all folders required", oapp.FoldersList, pageSize: 15);
-            Console.WriteLine($"You selected {string.Join(", ", folders)}");
+            string[] folderList = await oapp.FetchFolderList();
+            var folders = Prompt.MultiSelect("Select all folders required",folderList, pageSize: 15);
         }
 
         private void AskDestination()
         {
-            var destination = Prompt.Input<string>("Which path ?");
+            var destination = Prompt.Input<string>("Path");
             oapp.Destination =destination;
         }
 
