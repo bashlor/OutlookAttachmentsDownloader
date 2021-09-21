@@ -45,6 +45,7 @@ namespace OutlookAttachmentsDownloader
             }
             string[] folderList = await oapp.FetchFolderList();
             var folders = Prompt.MultiSelect("Select all folders required",folderList, pageSize: 15);
+            oapp.SelectedFolder = folders.ToArray();
         }
 
         private void AskDestination()

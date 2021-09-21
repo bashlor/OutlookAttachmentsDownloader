@@ -112,7 +112,6 @@ namespace OutlookAttachmentsDownloader
             {
                 var task = SaveAttachments(folderName);
                 tasksList.Append(task);
-                task.Start();
             }
             return Task.WhenAll(tasksList.ToArray());
         }
