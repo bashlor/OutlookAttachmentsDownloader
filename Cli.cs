@@ -50,8 +50,8 @@ namespace OutlookAttachmentsDownloader
 
         private void AskDestination()
         {
-            var destination = Prompt.Input<string>("Path");
-            oapp.Destination =destination;
+            var destination = Prompt.Input<string>("Path","",new[] { Validators.Required() });
+            oapp.Destination = destination;
         }
 
         private void AskConfirmation()

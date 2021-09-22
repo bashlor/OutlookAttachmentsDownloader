@@ -1,6 +1,7 @@
 ﻿using Microsoft.Office.Interop.Outlook;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -89,31 +90,31 @@ namespace OutlookAttachmentsDownloader
         public async Task SaveAttachments(string folderName)
         {
             
-            Folder folder = await SearchFolder(folderName, accounts[selectedAccount]);
+            Folder folder = SearchFolder(folderName, accounts[selectedAccount]);
             if(folder == null)
             {
                 throw new System.Exception("Folder " + folderName + " not found.");
             }
             else
             {
-                await SaveAttachmentForEveryMailItem(folder);
+                await Task.Run(()=> {
+                    SaveAttachmentForEveryMailItem(folder);
+                });
                 EnumerateFolders(folder,async (subFolder) =>
                 {
-                    await SaveAttachmentForEveryMailItem(folder);
+                    await Task.Run(() => { SaveAttachmentForEveryMailItem(folder); });
                 });
             }
 
         }
 
-        public Task SaveAttachments()
+        public async Task SaveAttachments()
         {
-            List<Task> tasksList = new List<Task>(); 
             foreach(string folderName in selectedFolders)
             {
-                var task = SaveAttachments(folderName);
-                tasksList.Append(task);
+                await SaveAttachments(folderName);
             }
-            return Task.WhenAll(tasksList.ToArray());
+            
         }
 
         private void EnumerateFolders(Folder folder, System.Action<Folder> callback)
@@ -177,10 +178,14 @@ namespace OutlookAttachmentsDownloader
             fetchAccountsList();
         }
         
-        private async Task SaveAttachmentForEveryMailItem(Folder folder)
+        private  void SaveAttachmentForEveryMailItem(Folder folder)
         {
+            
             foreach(Object item in folder.Items)
             {
+                string finalPath = destination + "\\" + folder.Name + "\\";
+                if (!Directory.Exists(finalPath))
+                    Directory.CreateDirectory(finalPath);
                 if (item is MailItem)
                 {
                     MailItem mailItem = ((MailItem)item);
@@ -190,7 +195,7 @@ namespace OutlookAttachmentsDownloader
                         {
                             for (int i = 1; i <= mailItem.Attachments.Count; i++)
                             {
-                                await mailItem.Attachments[i].SaveAsFile(destination + $"\\{folder.Name}\\" + mailItem.Attachments[i].Parent +  mailItem.Attachments[i].FileName);
+                                 mailItem.Attachments[i].SaveAsFile(finalPath + mailItem.Attachments[i].FileName);
                             }
                         }
                         catch(System.Runtime.InteropServices.COMException ex)
@@ -204,35 +209,52 @@ namespace OutlookAttachmentsDownloader
          
         }
 
-        private async Task<Folder> SearchFolder(string folderName, Folder root)
+        private Folder SearchFolder(string folderPath, Folder root)
         {
+              
+            List<string> splittedPath = folderPath.Split(Path.DirectorySeparatorChar).ToList();
+            splittedPath.RemoveAll(pathElement => pathElement.Length == 0);
+            splittedPath.RemoveAt(0);   //Remove the account email folder from the path;
             Folder found = null;
             if (root == null)
             {
                 throw new System.Exception("Root folder is null");
             }
-            found = await SearchFolderWorker(root, folderName);
+            found = SearchFolderWorker(root,splittedPath);
             return found;
         }
 
-        private async Task<Folder> SearchFolderWorker(Folder folder, String folderName)
+        private Folder SearchFolderWorker(Folder folder, List<string> folderPath,bool _continue=true,int level = 0)
         {
            Folders childFolders = folder.Folders;
-
+            Folder result = null;
             if (childFolders != null && childFolders.Count > 0)
             {
-                foreach (Folder childFolder in childFolders)
+                if (_continue)
                 {
-                    if (childFolder.Name == folderName)
+                    foreach (Folder childFolder in childFolders)
                     {
-                        return childFolder;
+                        if (level < folderPath.Count)
+                        {
+                            if (childFolder.Name == folderPath[level] && level + 1 == folderPath.Count)
+                            {
+                                result = childFolder;
+                                break;
+
+                            }
+                            else if (childFolder.Name == folderPath[level] && level + 1 < folderPath.Count)
+                            {
+                                return SearchFolderWorker(childFolder, folderPath, _continue, level + 1);
+                                
+                            }
+                        }
                     }
-                    await SearchFolderWorker(childFolder, folderName);  
+                    return result;
                 }
+                
+                        
             }
             return null;
         }
-
-
     }
 }

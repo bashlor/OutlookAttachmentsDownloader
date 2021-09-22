@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,10 +15,11 @@ namespace OutlookAttachmentsDownloader
             {
                 Cli cli = Cli.Instance;
                 await cli.InitializeSequence();
+                Console.ReadKey();
             }catch(System.Runtime.InteropServices.COMException ex)
             {
                 Console.WriteLine(ex.Message);
-                return -1;
+                
             }
             catch (SystemException ex)
             {
