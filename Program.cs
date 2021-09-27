@@ -27,6 +27,7 @@ namespace OutlookAttachmentsDownloader
                 Console.ReadKey();
                 return 1;
             }
+            OApp.Instance.closeInstance();
             return 0;
         }
     }
