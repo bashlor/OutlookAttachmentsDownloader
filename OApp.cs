@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 
 namespace OutlookAttachmentsDownloader
 {
+    /// <summary>
+    /// Implements all methods for interacting with the Outlook client.
+    /// </summary>
     public sealed class OApp
     {
         public static OApp Instance { get { return instance; } }

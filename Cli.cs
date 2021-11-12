@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace OutlookAttachmentsDownloader
 {
+    /// <summary>
+    /// Implementation of cli tool for user interaction.
+    /// </summary>
     public sealed class Cli
     {
         private static readonly Cli instance = new Cli();
@@ -19,6 +22,10 @@ namespace OutlookAttachmentsDownloader
             get {  return instance; }
         }
 
+        /// <summary>
+        /// Begin the prompt sequence with the user.
+        /// </summary>
+        /// <returns></returns>
         public async Task  InitializeSequence()
         {
             AskEmailAccount();
