@@ -390,3 +390,6 @@ FodyWeavers.xsd
 # JetBrains Rider
 .idea/
 *.sln.iml
+
+# Misc scripts
+*.bat
