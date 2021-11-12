@@ -1,8 +1,7 @@
-﻿using Sharprompt;
+﻿using OutlookAttachmentsDownloader.Exceptions;
+using Sharprompt;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace OutlookAttachmentsDownloader
@@ -10,7 +9,7 @@ namespace OutlookAttachmentsDownloader
     public sealed class Cli
     {
         private static readonly Cli instance = new Cli();
-        private OApp oapp;
+        private readonly OApp oapp;
         private Cli() {
             oapp = OApp.Instance;
         }
@@ -26,7 +25,7 @@ namespace OutlookAttachmentsDownloader
             await AskFolders();
             AskDestination();
             AskConfirmation();
-            await startDownloads();
+            await StartDownloads();
 
         }
 
@@ -45,7 +44,7 @@ namespace OutlookAttachmentsDownloader
             }
             string[] folderList = await oapp.FetchFolderList();
             var folders = Prompt.MultiSelect("Select all folders required",folderList, pageSize: 15);
-            oapp.SelectedFolder = folders.ToArray();
+            oapp.SelectedFolders = folders.ToArray();
         }
 
         private void AskDestination()
@@ -57,14 +56,14 @@ namespace OutlookAttachmentsDownloader
         private void AskConfirmation()
         {
             var answer = Prompt.Confirm("Please confirm all your previous choices", defaultValue: true);
-            if(answer == false)
+            if(!answer)
             {
                 Console.WriteLine("All right ! the program will exit");
-                throw new SystemException("Program execution aborted by user.");
+                throw new AbortedOperationException("Program execution aborted by user.");
             }
         }
 
-        private async Task startDownloads()
+        private async Task StartDownloads()
         {
             Console.WriteLine("Downloading attachments...");
             await oapp.SaveAttachments();

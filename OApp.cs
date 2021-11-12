@@ -1,4 +1,5 @@
 ﻿using Microsoft.Office.Interop.Outlook;
+using OutlookAttachmentsDownloader.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -18,9 +19,9 @@ namespace OutlookAttachmentsDownloader
         readonly Dictionary<string, Folder> accounts;
 
 
-        string selectedAccount;
-        string[] selectedFolders;
-        string destination;
+        private string selectedAccount;
+
+        private readonly string[] emails;
 
         static OApp() { }
 
@@ -39,35 +40,15 @@ namespace OutlookAttachmentsDownloader
             }
         }
 
-        public string[] SelectedFolder
-        {
-            get
-            {
-                return selectedFolders;
-            }
-            set
-            {
-                selectedFolders = value;
-            }
-        }
+        public string[] SelectedFolders { get; set; }
 
-        public string Destination
-        {
-            get
-            {
-                return destination;
-            }
-            set
-            {
-                destination = value;
-            }
-        }
+        public string Destination { get; set; }
 
         public string[] AccountsAvailable
         {
             get
             {
-                return accounts.Keys.ToArray();
+                return emails;
             }
         }
 
@@ -93,7 +74,7 @@ namespace OutlookAttachmentsDownloader
             Folder folder = SearchFolder(folderName, accounts[selectedAccount]);
             if(folder == null)
             {
-                throw new System.Exception("Folder " + folderName + " not found.");
+                throw new OAppException("Folder " + folderName + " not found.");
             }
             else
             {
@@ -110,7 +91,7 @@ namespace OutlookAttachmentsDownloader
 
         public async Task SaveAttachments()
         {
-            foreach(string folderName in selectedFolders)
+            foreach(string folderName in SelectedFolders)
             {
                 await SaveAttachments(folderName);
             }
@@ -133,7 +114,7 @@ namespace OutlookAttachmentsDownloader
 
 
 
-        private void fetchAccountsList()
+        private void FetchAccountsList()
         {
             foreach (MAPIFolder folder in outlookApplication.Session.Folders)
             {
@@ -149,10 +130,13 @@ namespace OutlookAttachmentsDownloader
                 outlookApplication = new Application();
                 outlookNamespace = outlookApplication.GetNamespace("MAPI");
                 accounts = new Dictionary<string, Folder>();
-                _initialization();
+                SelectedFolders = Array.Empty<string>();
+                Destination = "";
+                Initialization();
+                emails = accounts.Keys.ToArray();
         }
 
-        public void closeInstance()
+        public void CloseInstance()
         {
             if(outlookApplication != null)
             {
@@ -173,9 +157,9 @@ namespace OutlookAttachmentsDownloader
             }
         }
 
-        private  void _initialization()
+        private  void Initialization()
         {
-            fetchAccountsList();
+            FetchAccountsList();
         }
         
         private  void SaveAttachmentForEveryMailItem(Folder folder)
@@ -183,7 +167,7 @@ namespace OutlookAttachmentsDownloader
             
             foreach(Object item in folder.Items)
             {
-                string finalPath = destination + "\\" + folder.Name + "\\";
+                string finalPath = Path.Combine(Destination,folder.Name);
                 if (!Directory.Exists(finalPath))
                     Directory.CreateDirectory(finalPath);
                 if (item is MailItem)
@@ -195,12 +179,13 @@ namespace OutlookAttachmentsDownloader
                         {
                             for (int i = 1; i <= mailItem.Attachments.Count; i++)
                             {
-                                 mailItem.Attachments[i].SaveAsFile(finalPath + mailItem.Attachments[i].FileName);
+                                 mailItem.Attachments[i].SaveAsFile(Path.Combine(finalPath,mailItem.Attachments[i].FileName));
+                                Console.WriteLine("Downloaded : " + mailItem.Attachments[i].FileName);
                             }
                         }
                         catch(System.Runtime.InteropServices.COMException ex)
                         {
-                            throw new  SystemException("Error while trying download attachment from email :  " + ex.Message + "\n" + "Issues with : " + mailItem.Subject);
+                            Console.WriteLine("Error while trying download attachment from email :  " + ex.Message + "\n" + "Issues with : " + mailItem.Subject);
                         }
                     }
                     
@@ -214,11 +199,11 @@ namespace OutlookAttachmentsDownloader
               
             List<string> splittedPath = folderPath.Split(Path.DirectorySeparatorChar).ToList();
             splittedPath.RemoveAll(pathElement => pathElement.Length == 0);
-            splittedPath.RemoveAt(0);   //Remove the account email folder from the path;
+            splittedPath.RemoveAt(0);
             Folder found = null;
             if (root == null)
             {
-                throw new System.Exception("Root folder is null");
+                throw new OAppException("Root folder is null");
             }
             found = SearchFolderWorker(root,splittedPath);
             return found;

@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
+using System.Reflection;
 using System.Threading.Tasks;
 
+[assembly: AssemblyVersion("1.0.0.0")]
 namespace OutlookAttachmentsDownloader
 {
     class Program
@@ -27,7 +25,7 @@ namespace OutlookAttachmentsDownloader
                 Console.ReadKey();
                 return 1;
             }
-            OApp.Instance.closeInstance();
+            OApp.Instance.CloseInstance();
             return 0;
         }
     }
